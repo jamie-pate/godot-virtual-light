@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/VirtualLight.svg-52dffc30f95c2c8d3569a617a8d21001.stex"
+path="res://.import/VirtualLight.svg-dfb30c764044ceb243b666baf49a02c7.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/VirtualLight.svg"
-dest_files=[ "res://.import/VirtualLight.svg-52dffc30f95c2c8d3569a617a8d21001.stex" ]
+source_file="res://addons/VirtualLight/VirtualLight.svg"
+dest_files=[ "res://.import/VirtualLight.svg-dfb30c764044ceb243b666baf49a02c7.stex" ]
 
 [params]
 

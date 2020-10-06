@@ -2,8 +2,8 @@
 
 importer="texture"
 type="StreamTexture"
-path.s3tc="res://.import/VirtualLightOmni.svg-5fcf8aec1e95de875559886a6d4be7f7.s3tc.stex"
-path.etc2="res://.import/VirtualLightOmni.svg-5fcf8aec1e95de875559886a6d4be7f7.etc2.stex"
+path.s3tc="res://.import/VirtualLightOmni.svg-8c2c650104041e440839a411f037e94d.s3tc.stex"
+path.etc2="res://.import/VirtualLightOmni.svg-8c2c650104041e440839a411f037e94d.etc2.stex"
 metadata={
 "imported_formats": [ "s3tc", "etc2" ],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/VirtualLightOmni.svg"
-dest_files=[ "res://.import/VirtualLightOmni.svg-5fcf8aec1e95de875559886a6d4be7f7.s3tc.stex", "res://.import/VirtualLightOmni.svg-5fcf8aec1e95de875559886a6d4be7f7.etc2.stex" ]
+source_file="res://addons/VirtualLight/VirtualLightOmni.svg"
+dest_files=[ "res://.import/VirtualLightOmni.svg-8c2c650104041e440839a411f037e94d.s3tc.stex", "res://.import/VirtualLightOmni.svg-8c2c650104041e440839a411f037e94d.etc2.stex" ]
 
 [params]
 
