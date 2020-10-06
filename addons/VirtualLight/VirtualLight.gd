@@ -18,11 +18,8 @@ var _debug_meshes: Array = []
 
 func _set_detail(value: int):
 	detail = value
+	_ensure_target()
 	if target && is_inside_tree():
-		if Engine.editor_hint:
-			if target.get_parent() != self:
-				add_child(target)
-			return
 		# remove lights completely if we set max_low_detail
 		_reparent_target_later()
 		# Just disable shadows for LOWER_DETAIL
@@ -46,7 +43,8 @@ func _reparent_target():
 			while target && is_inside_tree() && target.get_parent() != parent:
 				if target.get_parent():
 					target.get_parent().remove_child(target)
-				target.name = str(get_path()).replace('/' , '_')
+				if _DEBUG:
+					target.name = str(get_path()).replace('/' , '_')
 				parent.add_child(target)
 				if target.is_inside_tree():
 					target.global_transform = global_transform
@@ -59,8 +57,8 @@ func _ensure_target():
 		_set_light_type(light_type)
 
 func _enter_tree():
-	_set_detail(detail)
 	_ensure_target()
+	_set_detail(detail)
 
 	_reparent_target_later()
 
@@ -146,6 +144,7 @@ func _debug_light_mesh(color: Color):
 	s.radius = radius
 	s.height = radius * 2
 	mi.mesh = s
+	mi.cast_shadow = GeometryInstance.SHADOW_CASTING_SETTING_OFF
 	var mat := SpatialMaterial.new()
 	mat.flags_no_depth_test = true
 	mat.flags_unshaded = true
