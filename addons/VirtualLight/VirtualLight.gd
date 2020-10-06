@@ -33,14 +33,9 @@ func _reparent_target_later():
 		_reparenting_target = true
 		call_deferred('_reparent_target')
 
-func _print(value):
-	if !Engine.editor_hint && name == 'OmniLight':
-		print('%s/%s: %s' % [name, target.name if target else null, value])
-
 func _reparent_target():
 	_reparenting_target = false
 	if is_inside_tree() && target:
-		_print('REPARENT %s: %s -> %s' % [detail == Detail.Lower, target.get_parent(), get_viewport().name])
 		if detail == Detail.Lower:
 			if target.get_parent():
 				target.get_parent().remove_child(target)
@@ -58,7 +53,6 @@ func _reparent_target():
 			var tp = target.get_parent()
 			if !tp:
 				print('no parent!')
-		_print('REPARENTED %s: %s t:%s' % [detail == Detail.Lower, target.get_parent(), is_inside_tree()])
 
 func _ensure_target():
 	if !target:
@@ -68,7 +62,6 @@ func _enter_tree():
 	_set_detail(detail)
 	_ensure_target()
 
-	_print('enter tree %s %s: %s -> %s' % [name, detail == Detail.Lower, target.get_path() if target.get_parent() else null, get_viewport()])
 	_reparent_target_later()
 
 func _exit_tree():
@@ -215,7 +208,6 @@ func _get(property: String):
 func _set(property: String, value):
 	_ensure_target()
 	var result = true
-	_print('%s set %s %s' % [target, property, value])
 	if Engine.editor_hint:
 		update_gizmo()
 
