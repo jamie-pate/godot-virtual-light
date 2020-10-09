@@ -2,6 +2,8 @@ extends Spatial
 tool
 
 const _DEBUG := false
+const VirtualLightServer = preload('./VirtualLightServer.gd');
+
 enum LightType { Omni, Spot }
 enum Detail { Normal=0, Low=1, Lower=2 }
 
@@ -11,10 +13,28 @@ export(Detail) var detail: int = Detail.Normal setget _set_detail
 var target: Light setget _set_target
 var show_debug_meshes: bool setget _set_show_debug_meshes
 
+var _r: RandomNumberGenerator
+
 # shadow properties to conditionally override based on detail
 var _props := {}
 var _reparenting_target := false
+var _skip_sync := false
 var _debug_meshes: Array = []
+
+func _init():
+	var err:int = connect('visibility_changed', self, '_on_visibility_changed')
+	assert(err == OK)
+
+func _on_visibility_changed():
+	_sync_visible()
+
+func get_param(param: int):
+	_ensure_target()
+	return target.get_param(param)
+
+func set_param(param: int, value: float):
+	_ensure_target()
+	target.set_param(param, value)
 
 func _set_detail(value: int):
 	detail = value
@@ -33,6 +53,7 @@ func _reparent_target_later():
 func _reparent_target():
 	_reparenting_target = false
 	if is_inside_tree() && target:
+
 		if detail == Detail.Lower:
 			if target.get_parent():
 				target.get_parent().remove_child(target)
@@ -51,10 +72,20 @@ func _reparent_target():
 			var tp = target.get_parent()
 			if !tp:
 				print('no parent!')
+		if target.visible != is_visible_in_tree():
+			_sync_visible()
 
 func _ensure_target():
 	if !target:
 		_set_light_type(light_type)
+
+func _process(delta):
+	# NOTIFICATION_TRANSFORM_CHANGED doesn't seem to work :(
+	_update_transform()
+
+func _sync_visible():
+	if !_skip_sync:
+		VirtualLightServer.instance().sync_visible(self)
 
 func _enter_tree():
 	_ensure_target()
@@ -80,7 +111,7 @@ func _copy_props(src: Light, dest, banned_props = []):
 	for p in banned_props:
 		banned.append(p)
 	for p in pl:
-		if !p.name in banned && p.name in dest && p.name in dest:
+		if !p.name in banned && p.name in dest && p.name in dest && p.usage != PROPERTY_USAGE_STORAGE:
 			dest[p.name] = src[p.name]
 
 func _set_light_type(value):
@@ -88,6 +119,8 @@ func _set_light_type(value):
 	light_type = value
 	if target && !changed:
 		return
+	if !target:
+		assert(get_child_count() == 0)
 	if target:
 		target.queue_free()
 	if value == LightType.Omni && (!target || !target is OmniLight):
@@ -100,12 +133,17 @@ func _set_light_type(value):
 		if target:
 			_copy_props(target, _new_target)
 		_set_target(_new_target)
+	target.visible = false
+	target.owner = self
+
 	_set_show_debug_meshes(show_debug_meshes)
-	# ensure that the correct gizmo gets drawn
 	_reparent_target_later()
-	if visible:
+	# ensure that the correct gizmo gets drawn
+	if visible && Engine.editor_hint:
+		_skip_sync = true
 		visible = false
 		visible = true
+		_skip_sync = false
 
 func _set_show_debug_meshes(value):
 	show_debug_meshes = value
@@ -114,10 +152,18 @@ func _set_show_debug_meshes(value):
 		var DebugLabel = load('%s/debug/DebugLabel.tscn' % [script_path])
 		var dl
 		if target:
-			target.add_child(_debug_light_mesh(Color.red))
+			for c in target.get_children():
+				c.queue_free()
+			var lm = _debug_light_mesh(Color.red)
+			if !_r:
+				_r = RandomNumberGenerator.new()
+				_r.randomize()
+			lm.transform = lm.transform.scaled(Vector3(_r.randf() + 0.1, _r.randf() + 0.1, _r.randf() + 0.1))
+			target.add_child(lm)
 			if DebugLabel:
 				dl = DebugLabel.instance()
-				dl.text = 'target: %s' % [get_path()]
+				dl.text = '%s %s target: %s' % [Engine.get_frames_drawn(), target, get_path()]
+				dl.transform.origin = Vector3(0, 0.5 * _r.randf(), 0)
 				target.add_child(dl)
 		if !_debug_meshes:
 			_debug_meshes.append(_debug_light_mesh(Color.green))
@@ -178,8 +224,12 @@ func _get_property_list():
 func _get(property: String):
 	if property == 'target':
 		return target
+	elif property == 'visible':
+		return visible
 	elif property == 'detail':
 		return detail
+	elif property == 'global_transform':
+		return global_transform
 	elif property == 'transform':
 		return transform
 	elif property == 'translation':
@@ -188,6 +238,8 @@ func _get(property: String):
 		return rotation
 	elif property == 'rotation_degrees':
 		return rotation_degrees
+	elif property == 'scale':
+		return scale
 	elif property == 'script':
 		return get_script()
 	elif property == 'name':
@@ -212,11 +264,15 @@ func _set(property: String, value):
 
 	if property == 'visible':
 		visible = value
+		call_deferred('_sync_visible')
 	if property == 'target':
 		_set_target(value)
 	elif property == 'detail':
 		_set_detail(value)
-	elif property == 'transform' && Engine.editor_hint:
+	elif property == 'global_transform':
+		global_transform = value
+		_update_transform()
+	elif property == 'transform':
 		transform = value
 		_update_transform()
 	elif property == 'translation':
@@ -225,6 +281,8 @@ func _set(property: String, value):
 	elif property == 'rotation':
 		rotation = value
 		_update_transform()
+	elif property == 'scale':
+		scale = value
 	elif property == 'rotation_degrees':
 		rotation_degrees = value
 		_update_transform()
