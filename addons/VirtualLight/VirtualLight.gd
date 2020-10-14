@@ -262,7 +262,7 @@ func _set(property: String, value):
 		update_gizmo()
 
 	if property == 'visible':
-		visible = value
+		visible = !!value
 		call_deferred('_sync_visible')
 	if property == 'target':
 		_set_target(value)
