@@ -134,7 +134,6 @@ func _set_light_type(value):
 			_copy_props(target, _new_target)
 		_set_target(_new_target)
 	target.visible = false
-	target.owner = self
 
 	_set_show_debug_meshes(show_debug_meshes)
 	_reparent_target_later()
