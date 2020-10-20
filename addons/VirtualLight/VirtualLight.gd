@@ -84,7 +84,7 @@ func _process(delta):
 	_update_transform()
 
 func _sync_visible():
-	if !_skip_sync:
+	if !_skip_sync && is_inside_tree():
 		VirtualLightServer.instance().sync_visible(self)
 
 func _enter_tree():
@@ -96,6 +96,7 @@ func _enter_tree():
 func _exit_tree():
 	if target && target.get_parent():
 		target.get_parent().remove_child(target)
+	VirtualLightServer.instance().remove(self)
 
 func copy_from(light: Light):
 	if light is OmniLight:
