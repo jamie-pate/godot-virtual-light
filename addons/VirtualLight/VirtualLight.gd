@@ -83,6 +83,15 @@ func _process(delta):
 	# NOTIFICATION_TRANSFORM_CHANGED doesn't seem to work :(
 	_update_transform()
 
+func _notification(what):
+	if what == NOTIFICATION_PREDELETE:
+		if target:
+			var p := target.get_parent()
+			if p:
+				p.remove_child(target)
+			if !target.is_queued_for_deletion():
+				target.queue_free()
+
 func _sync_visible():
 	if !_skip_sync && is_inside_tree():
 		VirtualLightServer.instance().sync_visible(self)
@@ -94,8 +103,10 @@ func _enter_tree():
 	_reparent_target_later()
 
 func _exit_tree():
-	if target && target.get_parent():
-		target.get_parent().remove_child(target)
+	if target:
+		var p = target.get_parent()
+		if p:
+			p.remove_child(target)
 	VirtualLightServer.instance().remove(self)
 
 func copy_from(light: Light):
@@ -124,6 +135,7 @@ func _set_light_type(value):
 		assert(get_child_count() == 0)
 	if target:
 		target.queue_free()
+		target = null
 	if value == LightType.Omni && (!target || !target is OmniLight):
 		var _new_target := OmniLight.new()
 		if target:
@@ -176,9 +188,9 @@ func _set_show_debug_meshes(value):
 	else:
 		if target:
 			for c in target.get_children():
-				target.remove_child(c)
+				c.queue_free()
 		for m in _debug_meshes:
-			remove_child(m)
+			m.queue_free()
 		_debug_meshes = []
 
 func _debug_light_mesh(color: Color):
