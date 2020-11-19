@@ -35,7 +35,8 @@ class Server:
 
 				if !light || !is_instance_valid(light):
 					continue
-				if light.is_inside_tree() && 'target' in light && light.target && light.target.is_inside_tree():
+				if light && is_instance_valid(light) && light.is_inside_tree() && \
+					'target' in light && light.target && light.target.is_inside_tree():
 					var start = OS.get_ticks_msec()
 					var target = light.target
 					var visible = light.is_visible_in_tree()
