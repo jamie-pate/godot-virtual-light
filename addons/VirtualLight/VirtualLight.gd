@@ -85,7 +85,6 @@ func _process(delta):
 
 func _notification(what):
 	if what == NOTIFICATION_PREDELETE:
-		print('PREDELETE VirtualLight %s' % [is_instance_valid(target) if target else null])
 		if target && is_instance_valid(target) && !target.is_queued_for_deletion():
 			target.queue_free()
 
