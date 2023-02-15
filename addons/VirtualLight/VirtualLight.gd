@@ -115,7 +115,7 @@ func copy_from(light: Light):
 func _copy_props(src: Light, dest, banned_props = []):
 	var pl = src.get_property_list()
 
-	var banned = ['multiplayer', 'global_transform']
+	var banned = ['multiplayer', 'global_transform', 'global_translation', 'global_rotation']
 	for p in banned_props:
 		banned.append(p)
 	for p in pl:
