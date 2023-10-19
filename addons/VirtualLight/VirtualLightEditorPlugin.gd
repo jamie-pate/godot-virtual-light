@@ -1,4 +1,4 @@
-tool
+@tool
 extends EditorPlugin
 const VirtualLightGizmoPlugin = preload('./VirtualLightGizmoPlugin.gd')
 const VirtualLight = preload('./VirtualLight.gd')
@@ -6,15 +6,15 @@ var gizmo_plugin
 
 func _enter_tree():
 	gizmo_plugin = VirtualLightGizmoPlugin.new(self)
-	add_spatial_gizmo_plugin(gizmo_plugin)
-	add_custom_type('VirtualLight', 'Spatial', preload('./VirtualLight.gd'), preload('./VirtualLight.svg'))
+	add_node_3d_gizmo_plugin(gizmo_plugin)
+	add_custom_type('VirtualLight', 'Node3D', preload('./VirtualLight.gd'), preload('./VirtualLight.svg'))
 
 	# add_control_to_container?
 	add_tool_menu_item('Convert All Lights to VirtualLights', self, 'convert_all_lights')
 	add_tool_menu_item('Convert Selected Lights to VirtualLights', self, 'convert_selected_lights')
 
 func _exit_tree():
-	remove_spatial_gizmo_plugin(gizmo_plugin)
+	remove_node_3d_gizmo_plugin(gizmo_plugin)
 	remove_custom_type('VirtualLight')
 	remove_tool_menu_item('Convert All Lights to VirtualLights')
 	remove_tool_menu_item('Convert Selected Lights to VirtualLights')
@@ -24,7 +24,7 @@ func convert_selected_lights(arg):
 
 	var lights = []
 	for l in selection.get_selected_nodes():
-		if l is OmniLight || l is SpotLight:
+		if l is OmniLight3D || l is SpotLight3D:
 			lights.append(l)
 	# clear selection before modifying the tree to prevent a crash!
 	selection.clear()
@@ -42,7 +42,7 @@ func _find_all_lights(node, lights):
 	if node == null:
 		node = edited_scene
 		print('scene root = ',node.get_path())
-	if node is OmniLight || node is SpotLight:
+	if node is OmniLight3D || node is SpotLight3D:
 		if node.owner == edited_scene:
 			lights.append(node)
 	for c in node.get_children():
@@ -54,7 +54,7 @@ func _replace_node(node: Node, by_node: Node) -> void:
 	for s in node.get_signal_list():
 		for c in node.get_signal_connection_list(s.name):
 			if c.flags & CONNECT_PERSIST:
-				by_node.connect(c.signal, c.target, c.method, c.binds, CONNECT_PERSIST)
+				by_node.connect(c.signal, Callable(c.target, c.method).bind(c.binds), CONNECT_PERSIST)
 
 	var gt = node.global_transform
 	node.replace_by(by_node, true)

@@ -1,7 +1,7 @@
-tool
-extends Spatial
+@tool
+extends Node3D
 
-export(String) var text = '' setget _set_text
+@export var text: String = '': set = _set_text
 
 var bodies = []
 
@@ -15,11 +15,11 @@ func _set_text(value):
 	call_deferred('_set_text_deferred', text)
 
 func _set_text_deferred(value):
-	$Viewport/DebugLabelText.text = value
+	$SubViewport/DebugLabelText.text = value
 	call_deferred('_update_once')
 
 func _set_small_font_deferred(value):
-	$Viewport/DebugLabelText.small_font = value
+	$SubViewport/DebugLabelText.small_font = value
 	call_deferred('_update_once')
 
 func _update_once():
@@ -28,8 +28,8 @@ func _update_once():
 	_updating = true;
 	var tree = get_tree()
 	if tree:
-		yield(tree, 'idle_frame')
-	$Viewport.render_target_update_mode = Viewport.UPDATE_ONCE
+		await tree.idle_frame
+	$SubViewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_updating = false
 
 

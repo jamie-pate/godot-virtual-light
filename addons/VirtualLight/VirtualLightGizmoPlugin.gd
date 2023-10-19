@@ -1,4 +1,4 @@
-extends EditorSpatialGizmoPlugin
+extends EditorNode3DGizmoPlugin
 # cribbed from godot's editor/spatial_editor_gizmos.cpp
 
 const VirtualLight = preload('./VirtualLight.gd')
@@ -10,7 +10,7 @@ func _ed_intf() -> EditorInterface:
 	return _editor_plugin.get_editor_interface()
 
 func get_name():
-	return "Virtual Light"
+	return "Virtual Light3D"
 
 func _init(editor_plugin: EditorPlugin):
 	_editor_plugin = editor_plugin
@@ -29,27 +29,27 @@ func _init(editor_plugin: EditorPlugin):
 func has_gizmo(spatial):
 	return spatial is VirtualLight
 
-func get_handle_name(gizmo, index):
+func _get_handle_name(gizmo, index):
 	match index:
 		0: return 'Radius'
 		1: return 'Aperture'
 		_: return 'Unknown'
 
-func get_handle_value(gizmo: EditorSpatialGizmo, index):
-	var virtual_light: VirtualLight = gizmo.get_spatial_node()
-	var light: Light = virtual_light.target
+func _get_handle_value(gizmo: EditorNode3DGizmo, index):
+	var virtual_light: VirtualLight = gizmo.get_node_3d()
+	var light: Light3D = virtual_light.target
 
 	if !light:
 		print('get_handle_values: no light on %s' % [virtual_light])
 		return null
 	match index:
-		0: return light.get_param(Light.PARAM_RANGE)
-		1: return light.get_param(Light.PARAM_SPOT_ANGLE)
+		0: return light.get_param(Light3D.PARAM_RANGE)
+		1: return light.get_param(Light3D.PARAM_SPOT_ANGLE)
 		_:
 			print('unknown handle %s' % index)
 			return null
 
-func _find_closest_angle_to_half_pi_arc(from: Vector3, to: Vector3, arc_radius: float, arc_xform: Transform) -> float:
+func _find_closest_angle_to_half_pi_arc(from: Vector3, to: Vector3, arc_radius: float, arc_xform: Transform3D) -> float:
 
 	#bleh, discrete is simpler
 	var arc_test_points: int = 64
@@ -77,16 +77,16 @@ func _find_closest_angle_to_half_pi_arc(from: Vector3, to: Vector3, arc_radius: 
 	return a * 180.0 / PI;
 
 func _snap_enabled():
-	Input.is_key_pressed(KEY_CONTROL)
+	Input.is_key_pressed(KEY_CTRL)
 
 func _translate_snap():
 	# TODO: find a way to load this from the SpatialEditor
 	# https://github.com/godotengine/godot/issues/11180
 	return 0.1 if Input.is_key_pressed(KEY_SHIFT) else 1.0
 
-func set_handle(gizmo: EditorSpatialGizmo, index: int, camera: Camera, point: Vector2):
-	var virtual_light: VirtualLight = gizmo.get_spatial_node()
-	var light: Light = virtual_light.target
+func set_handle(gizmo: EditorNode3DGizmo, index: int, camera: Camera3D, point: Vector2):
+	var virtual_light: VirtualLight = gizmo.get_node_3d()
+	var light: Light3D = virtual_light.target
 	if !light:
 		print('set_handle: no light on %s' % [virtual_light])
 		return
@@ -96,19 +96,19 @@ func set_handle(gizmo: EditorSpatialGizmo, index: int, camera: Camera, point: Ve
 	var ray_from := camera.project_ray_origin(point)
 	var ray_dir := camera.project_ray_normal(point)
 
-	var s := PoolVector3Array([gi.xform(ray_from), gi.xform(ray_from + ray_dir * 4096)])
+	var s := PackedVector3Array([gi * (ray_from), gi.xform(ray_from + ray_dir * 4096)])
 	if index == 0:
-		if light is SpotLight:
+		if light is SpotLight3D:
 			var r := Geometry.get_closest_points_between_segments(Vector3(), Vector3(0, 0, -4096), s[0], s[1])
 			var d := -r[0].z
 			if _snap_enabled():
-				d = stepify(d, _translate_snap())
+				d = snapped(d, _translate_snap())
 			if d <= 0:
 				d = 0
 
-			light.set_param(Light.PARAM_RANGE, d)
-			virtual_light.update_gizmo()
-		elif light is OmniLight:
+			light.set_param(Light3D.PARAM_RANGE, d)
+			virtual_light.update_gizmos()
+		elif light is OmniLight3D:
 			var b = camera.transform.basis
 			# get_axis in c++
 			var axis = b.z #Vector3(b.x.z, b.y.z, b.z.z)
@@ -120,34 +120,34 @@ func set_handle(gizmo: EditorSpatialGizmo, index: int, camera: Camera, point: Ve
 			if inters:
 				var r:float = inters.distance_to(gt.origin)
 				if _snap_enabled():
-					r = stepify(r, _translate_snap())
+					r = snapped(r, _translate_snap())
 
-				light.set_param(Light.PARAM_RANGE, r)
-				virtual_light.update_gizmo()
+				light.set_param(Light3D.PARAM_RANGE, r)
+				virtual_light.update_gizmos()
 	elif index == 1:
-		var a := _find_closest_angle_to_half_pi_arc(s[0], s[1], light.get_param(Light.PARAM_RANGE), gt)
-		light.set_param(Light.PARAM_SPOT_ANGLE, clamp(a, 0.01, 89.99))
-		virtual_light.update_gizmo()
+		var a := _find_closest_angle_to_half_pi_arc(s[0], s[1], light.get_param(Light3D.PARAM_RANGE), gt)
+		light.set_param(Light3D.PARAM_SPOT_ANGLE, clamp(a, 0.01, 89.99))
+		virtual_light.update_gizmos()
 
-func commit_handle(gizmo: EditorSpatialGizmo, index: int, restore, cancel: bool=false) -> void:
-	var virtual_light: VirtualLight = gizmo.get_spatial_node()
-	var light: Light = virtual_light.target
+func _commit_handle(gizmo: EditorNode3DGizmo, index: int, restore, cancel: bool=false) -> void:
+	var virtual_light: VirtualLight = gizmo.get_node_3d()
+	var light: Light3D = virtual_light.target
 	if !light:
-		print('commit_handle: no light on %s' % [virtual_light])
+		print('_commit_handle: no light on %s' % [virtual_light])
 		return
 	if cancel:
-		light.set_param(Light.PARAM_RANGE if index == 0 else Light.PARAM_SPOT_ANGLE, restore)
+		light.set_param(Light3D.PARAM_RANGE if index == 0 else Light3D.PARAM_SPOT_ANGLE, restore)
 	elif index == 0:
 		var ur := _editor_plugin.get_undo_redo()
-		ur.create_action('Change Light Radius')
-		ur.add_do_method(light, 'set_param', Light.PARAM_RANGE, light.get_param(Light.PARAM_RANGE))
-		ur.add_undo_method(light, 'set_param', Light.PARAM_RANGE, restore)
+		ur.create_action('Change Light3D Radius')
+		ur.add_do_method(light, 'set_param', Light3D.PARAM_RANGE, light.get_param(Light3D.PARAM_RANGE))
+		ur.add_undo_method(light, 'set_param', Light3D.PARAM_RANGE, restore)
 		ur.commit_action()
 	elif index == 1:
 		var ur := _editor_plugin.get_undo_redo()
-		ur.create_action('Change Light Radius')
-		ur.add_do_method(light, 'set_param', Light.PARAM_SPOT_ANGLE, light.get_param(Light.PARAM_SPOT_ANGLE))
-		ur.add_undo_method(light, 'set_param', Light.PARAM_SPOT_ANGLE, restore)
+		ur.create_action('Change Light3D Radius')
+		ur.add_do_method(light, 'set_param', Light3D.PARAM_SPOT_ANGLE, light.get_param(Light3D.PARAM_SPOT_ANGLE))
+		ur.add_undo_method(light, 'set_param', Light3D.PARAM_SPOT_ANGLE, restore)
 		ur.commit_action()
 
 func _color_get_s(color: Color):
@@ -188,8 +188,8 @@ func _color_get_h(color: Color):
 	return h
 
 func redraw(gizmo):
-	var virtual_light: VirtualLight = gizmo.get_spatial_node()
-	var light: Light = virtual_light.target
+	var virtual_light: VirtualLight = gizmo.get_node_3d()
+	var light: Light3D = virtual_light.target
 	gizmo.clear()
 	if !light:
 		print('redraw: no light on %s' % [virtual_light])
@@ -197,19 +197,19 @@ func redraw(gizmo):
 	var color: Color = light.light_color
 	color = Color.from_hsv(_color_get_h(color), _color_get_s(color), 1)
 
-	if light is OmniLight:
+	if light is OmniLight3D:
 		var lines_material := get_material('lines_secondary', gizmo)
 		var lines_billboard_material := get_material('lines_billboard', gizmo)
 		var icon := get_material('light_omni_icon', gizmo)
 
-		var on := light as OmniLight
-		var r: float = on.get_param(Light.PARAM_RANGE)
-		var points := PoolVector3Array()
-		var points_billboard := PoolVector3Array()
+		var on := light as OmniLight3D
+		var r: float = on.get_param(Light3D.PARAM_RANGE)
+		var points := PackedVector3Array()
+		var points_billboard := PackedVector3Array()
 
 		for i in range(120):
-			var ra: float = deg2rad(float(i * 3))
-			var rb: float = deg2rad(float((i + 1) * 3))
+			var ra: float = deg_to_rad(float(i * 3))
+			var rb: float = deg_to_rad(float((i + 1) * 3))
 			var a := Vector2(sin(ra), cos(ra)) * r
 			var b := Vector2(sin(rb), cos(rb)) * r
 
@@ -227,27 +227,27 @@ func redraw(gizmo):
 		gizmo.add_lines(points_billboard, lines_billboard_material, true, color)
 		gizmo.add_unscaled_billboard(icon, 0.05, color)
 
-		var handles := PoolVector3Array()
+		var handles := PackedVector3Array()
 		handles.push_back(Vector3(r, 0, 0))
 		# don't pass gizmo because it's actually for handles?
 		gizmo.add_handles(handles, get_material('handles_billboard', null), true)
 
-	if light is SpotLight:
+	if light is SpotLight3D:
 		var material_primary := get_material('lines_primary', gizmo)
 		var material_secondary := get_material('lines_secondary', gizmo)
 		var icon := get_material('light_spot_icon', gizmo)
 
-		var points_primary := PoolVector3Array()
-		var points_secondary := PoolVector3Array()
-		var sl := light as SpotLight
-		var r: float =  sl.get_param(Light.PARAM_RANGE)
-		var angle = deg2rad(sl.get_param(Light.PARAM_SPOT_ANGLE))
+		var points_primary := PackedVector3Array()
+		var points_secondary := PackedVector3Array()
+		var sl := light as SpotLight3D
+		var r: float =  sl.get_param(Light3D.PARAM_RANGE)
+		var angle = deg_to_rad(sl.get_param(Light3D.PARAM_SPOT_ANGLE))
 		var w := r * sin(angle)
 		var d := r * cos(angle)
 
 		for i in range(120):
-			var ra := deg2rad(float(i * 3))
-			var rb := deg2rad(float((i + 1) * 3))
+			var ra := deg_to_rad(float(i * 3))
+			var rb := deg_to_rad(float((i + 1) * 3))
 			var a := Vector2(sin(ra), cos(ra)) * w
 			var b := Vector2(sin(rb), cos(rb)) * w
 
@@ -267,7 +267,7 @@ func redraw(gizmo):
 		var ra: float = 16.0 * PI * 2.0 / 64.0
 		var a := Vector2(sin(ra), cos(ra)) * w
 
-		var handles = PoolVector3Array([
+		var handles = PackedVector3Array([
 			Vector3(0, 0, -r),
 			Vector3(a.x, a.y, -d)
 		])

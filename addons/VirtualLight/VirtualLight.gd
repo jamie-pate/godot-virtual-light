@@ -1,5 +1,5 @@
-extends Spatial
-tool
+@tool
+extends Node3D
 
 const _DEBUG := false
 const VirtualLightServer = preload('./VirtualLightServer.gd');
@@ -7,11 +7,11 @@ const VirtualLightServer = preload('./VirtualLightServer.gd');
 enum LightType { Omni, Spot }
 enum Detail { Normal=0, Low=1, Lower=2 }
 
-export(LightType) var light_type:= LightType.Omni setget _set_light_type
-export(Detail) var detail: int = Detail.Normal setget _set_detail
+@export var light_type := LightType.Omni: set = _set_light_type
+@export var detail: Detail = Detail.Normal: set = _set_detail
 
-var target: Light setget _set_target
-var show_debug_meshes: bool setget _set_show_debug_meshes
+var target: Light3D: set = _set_target
+var show_debug_meshes: bool: set = _set_show_debug_meshes
 
 var _r: RandomNumberGenerator
 
@@ -22,7 +22,7 @@ var _skip_sync := false
 var _debug_meshes: Array = []
 
 func _init():
-	var err:int = connect('visibility_changed', self, '_on_visibility_changed')
+	var err:int = connect('visibility_changed', Callable(self, '_on_visibility_changed'))
 	assert(err == OK)
 
 func _on_visibility_changed():
@@ -59,7 +59,7 @@ func _reparent_target():
 				target.get_parent().remove_child(target)
 		else:
 			var parent: Node = get_viewport()
-			if Engine.editor_hint:
+			if Engine.is_editor_hint():
 				parent = self
 			while target && is_inside_tree() && target.get_parent() != parent:
 				if target.get_parent():
@@ -90,7 +90,7 @@ func _notification(what):
 
 func _sync_visible():
 	if !_skip_sync && is_inside_tree():
-		VirtualLightServer.instance().sync_visible(self)
+		VirtualLightServer.get_instance().sync_visible(self)
 
 func _enter_tree():
 	_ensure_target()
@@ -103,19 +103,19 @@ func _exit_tree():
 		var p = target.get_parent()
 		if p:
 			p.remove_child(target)
-	VirtualLightServer.instance().remove(self)
+	VirtualLightServer.get_instance().remove(self)
 
-func copy_from(light: Light):
-	if light is OmniLight:
+func copy_from(light: Light3D):
+	if light is OmniLight3D:
 		_set_light_type(LightType.Omni)
-	elif light is SpotLight:
+	elif light is SpotLight3D:
 		_set_light_type(LightType.Spot)
 	_copy_props(light, self, ['script'])
 
-func _copy_props(src: Light, dest, banned_props = []):
+func _copy_props(src: Light3D, dest, banned_props = []):
 	var pl = src.get_property_list()
 
-	var banned = ['multiplayer', 'global_transform', 'global_translation', 'global_rotation']
+	var banned = ['multiplayer', 'global_transform', 'global_position', 'global_rotation']
 	for p in banned_props:
 		banned.append(p)
 	for p in pl:
@@ -132,13 +132,13 @@ func _set_light_type(value):
 	if target:
 		target.queue_free()
 		target = null
-	if value == LightType.Omni && (!target || !target is OmniLight):
-		var _new_target := OmniLight.new()
+	if value == LightType.Omni && (!target || !target is OmniLight3D):
+		var _new_target := OmniLight3D.new()
 		if target:
 			_copy_props(target, _new_target)
 		_set_target(_new_target)
-	if value == LightType.Spot && (!target || !target is SpotLight):
-		var _new_target := SpotLight.new()
+	if value == LightType.Spot && (!target || !target is SpotLight3D):
+		var _new_target := SpotLight3D.new()
 		if target:
 			_copy_props(target, _new_target)
 		_set_target(_new_target)
@@ -147,7 +147,7 @@ func _set_light_type(value):
 	_set_show_debug_meshes(show_debug_meshes)
 	_reparent_target_later()
 	# ensure that the correct gizmo gets drawn
-	if visible && Engine.editor_hint:
+	if visible && Engine.is_editor_hint():
 		_skip_sync = true
 		visible = false
 		visible = true
@@ -162,21 +162,21 @@ func _set_show_debug_meshes(value):
 		if target:
 			for c in target.get_children():
 				c.queue_free()
-			var lm = _debug_light_mesh(Color.red)
+			var lm = _debug_light_mesh(Color.RED)
 			if !_r:
 				_r = RandomNumberGenerator.new()
 				_r.randomize()
 			lm.transform = lm.transform.scaled(Vector3(_r.randf() + 0.1, _r.randf() + 0.1, _r.randf() + 0.1))
 			target.add_child(lm)
 			if DebugLabel:
-				dl = DebugLabel.instance()
+				dl = DebugLabel.instantiate()
 				dl.text = '%s %s target: %s' % [Engine.get_frames_drawn(), target, get_path()]
 				dl.transform.origin = Vector3(0, 0.5 * _r.randf(), 0)
 				target.add_child(dl)
 		if !_debug_meshes:
-			_debug_meshes.append(_debug_light_mesh(Color.green))
+			_debug_meshes.append(_debug_light_mesh(Color.GREEN))
 			if DebugLabel:
-				dl = DebugLabel.instance()
+				dl = DebugLabel.instantiate()
 				dl.text = get_path()
 				_debug_meshes.append(dl)
 			for m in _debug_meshes:
@@ -190,7 +190,7 @@ func _set_show_debug_meshes(value):
 		_debug_meshes = []
 
 func _debug_light_mesh(color: Color):
-	var mi := MeshInstance.new()
+	var mi := MeshInstance3D.new()
 	var s := SphereMesh.new()
 	s.radial_segments = 12
 	s.rings = 8
@@ -198,17 +198,17 @@ func _debug_light_mesh(color: Color):
 	s.radius = radius
 	s.height = radius * 2
 	mi.mesh = s
-	mi.cast_shadow = GeometryInstance.SHADOW_CASTING_SETTING_OFF
-	var mat := SpatialMaterial.new()
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
 	mat.flags_no_depth_test = true
 	mat.flags_unshaded = true
 	mat.flags_transparent = true
-	mat.params_blend_mode = SpatialMaterial.BLEND_MODE_ADD
+	mat.params_blend_mode = StandardMaterial3D.BLEND_MODE_ADD
 	mat.albedo_color = Color(color.r, color.g, color.b, color.a if color.a < 1.0 else 0.25)
-	mi.set_surface_material(0, mat)
+	mi.set_surface_override_material(0, mat)
 	return mi
 
-func _set_target(value: Light):
+func _set_target(value: Light3D):
 	if value:
 		target = value
 		_props.shadow_enabled = target.shadow_enabled
@@ -229,7 +229,7 @@ func _get_property_list():
 	return []
 
 # https://docs.godotengine.org/en/stable/classes/class_object.html?highlight=Object#class-object-method-get
-func _get(property: String):
+func _get(property: StringName):
 	if property == 'target':
 		return target
 	elif property == 'visible':
@@ -240,8 +240,8 @@ func _get(property: String):
 		return global_transform
 	elif property == 'transform':
 		return transform
-	elif property == 'translation':
-		return translation
+	elif property == 'position':
+		return position
 	elif property == 'rotation':
 		return rotation
 	elif property == 'rotation_degrees':
@@ -264,11 +264,11 @@ func _get(property: String):
 	# worrying that the return value for 'property doesn't exist' is null
 	return null
 
-func _set(property: String, value):
+func _set(property: StringName, value):
 	_ensure_target()
 	var result = true
-	if Engine.editor_hint:
-		update_gizmo()
+	if Engine.is_editor_hint():
+		update_gizmos()
 
 	if property == 'visible':
 		visible = !!value
@@ -283,8 +283,8 @@ func _set(property: String, value):
 	elif property == 'transform':
 		transform = value
 		_update_transform()
-	elif property == 'translation':
-		translation = value
+	elif property == 'position':
+		position = value
 		_update_transform()
 	elif property == 'rotation':
 		rotation = value

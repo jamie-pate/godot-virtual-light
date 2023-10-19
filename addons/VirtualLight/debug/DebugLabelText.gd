@@ -1,7 +1,7 @@
-tool
+@tool
 extends Control
 
-export(String) var text = '' setget _set_text
+@export var text: String = '': set = _set_text
 
 func _set_text(value):
 	text = value
